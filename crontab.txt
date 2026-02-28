@@ -1,0 +1,1 @@
+* * * * * root /usr/local/bin/php /app/requeue-cron.php >> /var/log/requeue-cron.log 2>&1
