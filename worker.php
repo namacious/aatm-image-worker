@@ -18,6 +18,7 @@ function connectRedis(array $config): Redis
 {
     $redis = new Redis();
     $redis->connect($config['redis']['host'], $config['redis']['port']);
+    $redis->select((int)($config['redis']['db'] ?? 2));  // ← add this line
     $redis->setOption(Redis::OPT_READ_TIMEOUT, -1);
     return $redis;
 }
