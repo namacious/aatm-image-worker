@@ -3,6 +3,7 @@ return [
     'redis' => [
         'host' => getenv('REDIS_HOST') ?: '172.31.16.0',
         'port' => (int)(getenv('REDIS_PORT') ?: 6379),
+        'db'    => (int)(getenv('REDIS_DB') ?: 2),
         'queue' => getenv('REDIS_QUEUE') ?: 'card-image',
     ],
     'db' => [
