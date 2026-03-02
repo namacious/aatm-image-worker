@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 function createPdo(array $config): PDO
@@ -14,4 +13,15 @@ function createPdo(array $config): PDO
             PDO::ATTR_PERSISTENT         => false,
         ]
     );
+}
+
+function ensurePdo(PDO $pdo, array $config): PDO
+{
+    try {
+        $pdo->query('SELECT 1');
+        return $pdo;
+    } catch (PDOException $e) {
+        echo "⚠️ DB reconnecting... ({$e->getMessage()})\n";
+        return createPdo($config);
+    }
 }

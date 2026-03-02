@@ -59,6 +59,9 @@ while (true) {
         continue;
     }
 
+    // Before renderCard call — add this line
+    $pdo = ensurePdo($pdo, $config);
+
     echo "🎨 Processing card_id={$job['card_id']}\n";
 
     try {
