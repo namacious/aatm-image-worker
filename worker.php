@@ -62,7 +62,7 @@ while (true) {
     echo "🎨 Processing card_id={$job['card_id']}\n";
 
     try {
-        renderCard($job, $pdo, $s3, $queueRedis, $config);
+        renderCard($job, $pdo, $s3, $cacheRedis, $config);
         echo "✅ Card {$job['card_id']} rendered\n";
     } catch (Throwable $e) {
         echo "❌ Card {$job['card_id']} failed: {$e->getMessage()}\n";

@@ -251,23 +251,17 @@ function renderCard(
         // --------------------------------------------------
         // 🧹 CACHE UPDATE — overwrite stale "processing"
         // --------------------------------------------------
-        $cacheKey = 'card:hash:' . $job['card_hash'];
+        $cacheKey = 'c:card:hash:' . $job['card_hash'];
 
         // Refresh Cache
         $redis->setex(
-            $cacheKey,
+            'c:card:hash:' . $job['card_hash'],  // ← add c: prefix
             86400,
             json_encode([
                 'card_status' => 'ready',
                 'card_url'    => $url,
             ])
         );
-
-        // 🔹 1-line API fallback (self-heal stale cache)
-        $redis->setnx('card:hash:' . $job['card_hash'], json_encode([
-            'card_status' => 'ready',
-            'card_url'    => $url,
-        ]));
 
     } catch (Throwable $e) {
 
