@@ -3,7 +3,13 @@
 use Aws\S3\S3Client;
 
 // S3Client is now injected from worker.php — not constructed per job
-function renderCard(array $job, PDO $pdo, S3Client $s3, array $config): void
+function renderCard(
+    array $job,
+    PDO $pdo,
+    S3Client $s3,
+    Redis $redis,
+    array $config
+): void
 {
     // --------------------------------------------------
     // 1️⃣ ATOMIC LOCK + RETRY GUARD
@@ -241,6 +247,27 @@ function renderCard(array $job, PDO $pdo, S3Client $s3, array $config): void
                 updated_at   = NOW()
             WHERE id = ?
         ")->execute([$url, $job['card_id']]);
+
+        // --------------------------------------------------
+        // 🧹 CACHE UPDATE — overwrite stale "processing"
+        // --------------------------------------------------
+        $cacheKey = 'card:hash:' . $job['card_hash'];
+
+        // Refresh Cache
+        $redis->setex(
+            $cacheKey,
+            86400,
+            json_encode([
+                'card_status' => 'ready',
+                'card_url'    => $url,
+            ])
+        );
+
+        // 🔹 1-line API fallback (self-heal stale cache)
+        $redis->setnx('card:hash:' . $job['card_hash'], json_encode([
+            'card_status' => 'ready',
+            'card_url'    => $url,
+        ]));
 
     } catch (Throwable $e) {
 

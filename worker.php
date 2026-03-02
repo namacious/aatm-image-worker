@@ -5,43 +5,16 @@ declare(strict_types=1);
 require __DIR__ . '/vendor/autoload.php';
 
 $config = require __DIR__ . '/config.php';
-require __DIR__ . '/db.php';          // defines createPdo() + $pdo
-require __DIR__ . '/render_card.php'; // defines renderCard()
+require __DIR__ . '/db.php';
+require __DIR__ . '/redis.php';
+require __DIR__ . '/render_card.php';
 
 use Aws\S3\S3Client;
 
-$pdo = createPdo($config);                  // ← now $config exists, safe to call
-// --------------------------------------------------
-// REDIS CONNECT
-// --------------------------------------------------
-function connectRedis(array $config): Redis
-{
-    $redis = new Redis();
-    $redis->connect($config['redis']['host'], $config['redis']['port']);
-    $redis->select((int)($config['redis']['db'] ?? 2));  // ← add this line
-    $redis->setOption(Redis::OPT_READ_TIMEOUT, -1);
-    return $redis;
-}
+$pdo = createPdo($config);
 
 // --------------------------------------------------
-// PDO PING — reconnects if MySQL dropped the connection.
-// Long-running workers will eventually hit MySQL's wait_timeout
-// (default 8h, but often lower on RDS/Aurora). This keeps it alive.
-// --------------------------------------------------
-function ensurePdo(PDO $pdo, array $config): PDO
-{
-    try {
-        $pdo->query('SELECT 1');
-        return $pdo; // connection healthy, reuse it
-    } catch (PDOException $e) {
-        echo "⚠️  DB connection lost, reconnecting... ({$e->getMessage()})\n";
-        return createPdo($config); // fresh connection
-    }
-}
-
-// --------------------------------------------------
-// S3 CLIENT — created ONCE at startup, reused for every job.
-// Saves ~50-100ms per job vs constructing inside renderCard().
+// S3 CLIENT — create once
 // --------------------------------------------------
 $s3 = new S3Client([
     'version'     => 'latest',
@@ -53,68 +26,46 @@ $s3 = new S3Client([
     ],
 ]);
 
-$redis = connectRedis($config);
+// 🔴 QUEUE redis (DB 2)
+$queueRedis = redisQueue($config);
+
+// 🟢 CACHE redis (DB 0)
+$cacheRedis = redisCache($config);
 
 echo "🟢 Image worker started\n";
 
-// --------------------------------------------------
-// WORKER LOOP
-// --------------------------------------------------
 while (true) {
 
     echo "⏳ Waiting for job...\n";
 
-    // --------------------------------------------------
-    // 1. BLOCKING POP — with reconnect on Redis drop
-    // --------------------------------------------------
     try {
-        $data = $redis->brPop([$config['redis']['queue']], 0);
+        $data = $queueRedis->brPop([$config['redis']['queue']], 0);
     } catch (RedisException $e) {
-        echo "⚠️  Redis connection lost, reconnecting... ({$e->getMessage()})\n";
+        echo "⚠️ Redis lost, reconnecting...\n";
         sleep(2);
-        $redis = connectRedis($config);
+        $queueRedis = redisQueue($config);
+        $cacheRedis = redisCache($config);
         continue;
     }
 
-    if (!$data || !isset($data[1])) {
-        echo "⚠️  Empty response from Redis, retrying...\n";
-        sleep(1);
+    if (!isset($data[1])) {
         continue;
     }
 
-    // --------------------------------------------------
-    // 2. DECODE PAYLOAD
-    // --------------------------------------------------
     $job = json_decode($data[1], true);
 
     if (!$job || !isset($job['card_id'])) {
-        echo "⚠️  Invalid job payload, skipping\n";
+        echo "⚠️ Invalid job\n";
         continue;
     }
 
-    // --------------------------------------------------
-    // 3. PING DB before doing any work — reconnect if dropped
-    // --------------------------------------------------
-    $pdo = ensurePdo($pdo, $config);
-
     echo "🎨 Processing card_id={$job['card_id']}\n";
 
-    // --------------------------------------------------
-    // 4. RENDER — $s3 passed in so renderCard() doesn't
-    //    construct a new client on every single job
-    // --------------------------------------------------
     try {
-    renderCard($job, $pdo, $s3, $config);
-        echo "✅ Card {$job['card_id']} rendered successfully\n";
-    } catch (RuntimeException $e) {
-        if (str_contains($e->getMessage(), 'lock not acquired')) {
-            echo "⚠️  Card {$job['card_id']} skipped: {$e->getMessage()}\n";
-        } else {
-            echo "❌ Card {$job['card_id']} failed (retry scheduled if count < 3): {$e->getMessage()}\n";
-        }
-        sleep(1);
+        renderCard($job, $pdo, $s3, $cacheRedis, $config);
+        echo "✅ Card {$job['card_id']} rendered\n";
     } catch (Throwable $e) {
-        echo "❌ Card {$job['card_id']} failed (retry scheduled if count < 3): {$e->getMessage()}\n";
+        echo "❌ Card {$job['card_id']} failed: {$e->getMessage()}\n";
         sleep(1);
     }
 }
