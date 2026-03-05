@@ -5,10 +5,10 @@ return [
         'port' => (int)(getenv('REDIS_PORT') ?: 6379),
 
         // MUST MATCH Hyperf default cache DB
-        'cache_db'  => (int) ($_ENV['REDIS_DB'] ?? 0),
+        'cache_db'  => (int) ($_ENV['REDIS_DB'] ?? 1), // 0 for dev, 1 for prod
 
         // MUST MATCH Hyperf queue DB
-        'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 0),
+        'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 2), // 0 for dev, 2 for prod
 
         'queue' => getenv('REDIS_QUEUE') ?: 'card-image-dev',
     ],
