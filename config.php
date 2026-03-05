@@ -5,7 +5,7 @@ return [
         'port' => (int)(getenv('REDIS_PORT') ?: 6379),
 
         // MUST MATCH Hyperf default cache DB
-        'cache_db'  => (int) ($_ENV['REDIS_DB'] ?? 1),
+        'cache_db'  => (int) ($_ENV['REDIS_DB'] ?? 0),
 
         // MUST MATCH Hyperf queue DB
         'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 2),
