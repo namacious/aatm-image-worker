@@ -10,7 +10,7 @@ return [
         // MUST MATCH Hyperf queue DB
         'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 2), // 0 for dev, 2 for prod
 
-        'queue' => getenv('REDIS_QUEUE') ?: 'card-image-dev',
+        'queue' => getenv('REDIS_QUEUE') ?: 'card-image',
     ],
     'db' => [
         'host'     => getenv('DB_HOST') ?: 'aatm-aurora-cluster.cluster-ctiiwqm0m04r.us-west-2.rds.amazonaws.com',
