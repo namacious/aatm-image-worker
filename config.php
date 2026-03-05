@@ -8,7 +8,7 @@ return [
         'cache_db'  => (int) ($_ENV['REDIS_DB'] ?? 0),
 
         // MUST MATCH Hyperf queue DB
-        'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 2),
+        'queue_db' => (int) ($_ENV['REDIS_QUEUE_DB'] ?? 0),
 
         'queue' => getenv('REDIS_QUEUE') ?: 'card-image-dev',
     ],
