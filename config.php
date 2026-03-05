@@ -1,7 +1,7 @@
 <?php
 return [
     'redis' => [
-        'host' => getenv('REDIS_HOST') ?: '172.31.16.0',
+        'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
         'port' => (int)(getenv('REDIS_PORT') ?: 6379),
 
         // MUST MATCH Hyperf default cache DB
