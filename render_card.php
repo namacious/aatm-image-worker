@@ -92,6 +92,7 @@ function renderCard(
             'orange' => ['text' => 'black',   'year' => 'black',   'dash' => 'white'],
             'black'  => ['text' => '#FFF200',  'year' => '#FFF200', 'dash' => '#F39DFA'],
             'green'  => ['text' => 'black',    'year' => 'black',   'dash' => '#FFF200'],
+            'yellow'  => ['text' => 'black',    'year' => 'black',   'dash' => '#ff6900'],
         ];
 
         $style = $templateStyles[$template] ?? $templateStyles['orange'];
